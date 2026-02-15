@@ -29,6 +29,8 @@ except ImportError:
 class PortkeyResponseAPIModelConfig(BaseModel):
     model_name: str
     model_kwargs: dict[str, Any] = {}
+    extra_tools: list[dict[str, Any]] = []
+    """Additional tools appended to the default bash tool."""
     litellm_model_registry: Path | str | None = os.getenv("LITELLM_MODEL_REGISTRY_PATH")
     litellm_model_name_override: str = ""
     cost_tracking: Literal["default", "ignore_errors"] = os.getenv("MSWEA_COST_TRACKING", "default")
@@ -73,7 +75,7 @@ class PortkeyResponseAPIModel:
         return self.client.responses.create(
             model=self.config.model_name,
             input=messages,
-            tools=[BASH_TOOL_RESPONSE_API],
+            tools=[BASH_TOOL_RESPONSE_API, *self.config.extra_tools],
             **(self.config.model_kwargs | kwargs),
         )
 

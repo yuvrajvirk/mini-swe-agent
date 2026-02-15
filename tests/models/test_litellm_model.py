@@ -5,6 +5,7 @@ import pytest
 from minisweagent.exceptions import FormatError
 from minisweagent.models.litellm_model import LitellmModel, LitellmModelConfig
 from minisweagent.models.utils.actions_toolcall import BASH_TOOL
+from minisweagent.tools import get_tasks_tool_definition
 
 
 class TestLitellmModelConfig:
@@ -51,6 +52,23 @@ class TestLitellmModel:
         model = LitellmModel(model_name="gpt-4")
         result = model.query([{"role": "user", "content": "list files"}])
         assert result["extra"]["actions"] == [{"command": "ls -la", "tool_call_id": "call_abc"}]
+
+    @patch("minisweagent.models.litellm_model.litellm.completion")
+    @patch("minisweagent.models.litellm_model.litellm.cost_calculator.completion_cost")
+    def test_query_includes_extra_tools(self, mock_cost, mock_completion):
+        tool_call = MagicMock()
+        tool_call.function.name = "bash"
+        tool_call.function.arguments = '{"command": "echo test"}'
+        tool_call.id = "call_1"
+        mock_completion.return_value = _mock_litellm_response([tool_call])
+        mock_cost.return_value = 0.001
+
+        tasks_tool = get_tasks_tool_definition()
+        model = LitellmModel(model_name="gpt-4", extra_tools=[tasks_tool])
+        model.query([{"role": "user", "content": "test"}])
+
+        mock_completion.assert_called_once()
+        assert mock_completion.call_args.kwargs["tools"] == [BASH_TOOL, tasks_tool]
 
     @patch("minisweagent.models.litellm_model.litellm.completion")
     @patch("minisweagent.models.litellm_model.litellm.cost_calculator.completion_cost")

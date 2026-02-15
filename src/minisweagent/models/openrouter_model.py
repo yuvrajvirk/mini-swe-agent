@@ -24,6 +24,8 @@ logger = logging.getLogger("openrouter_model")
 class OpenRouterModelConfig(BaseModel):
     model_name: str
     model_kwargs: dict[str, Any] = {}
+    extra_tools: list[dict[str, Any]] = []
+    """Additional tools appended to the default bash tool."""
     set_cache_control: Literal["default_end"] | None = None
     """Set explicit cache control markers, for example for Anthropic models"""
     cost_tracking: Literal["default", "ignore_errors"] = os.getenv("MSWEA_COST_TRACKING", "default")
@@ -68,7 +70,7 @@ class OpenRouterModel:
         payload = {
             "model": self.config.model_name,
             "messages": messages,
-            "tools": [BASH_TOOL],
+            "tools": [BASH_TOOL, *self.config.extra_tools],
             "usage": {"include": True},
             **(self.config.model_kwargs | kwargs),
         }

@@ -24,6 +24,35 @@ BASH_TOOL_RESPONSE_API = {
     },
 }
 
+TASKS_TOOL_RESPONSE_API = {
+    "type": "function",
+    "name": "tasks",
+    "description": "Manage a lightweight task graph without shell commands.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "op": {
+                "type": "string",
+                "enum": ["create", "get", "list", "note_append", "dep_add", "close", "delete"],
+            },
+            "id": {"type": "string"},
+            "title": {"type": "string"},
+            "description": {"type": "string"},
+            "client_id": {"type": "string"},
+            "view": {"type": "string", "enum": ["open", "ready", "closed", "all"]},
+            "include_full": {"type": "boolean"},
+            "limit": {"type": "integer"},
+            "offset": {"type": "integer"},
+            "note": {"type": "string"},
+            "blocker_id": {"type": "string"},
+            "blocked_id": {"type": "string"},
+            "reason": {"type": "string"},
+            "hard": {"type": "boolean"},
+        },
+        "required": ["op"],
+    },
+}
+
 
 def _format_error_message(error_text: str) -> dict:
     """Create a FormatError message in Responses API format."""
@@ -62,14 +91,22 @@ def parse_toolcall_actions_response(output: list, *, format_error_template: str)
             args = json.loads(tool_call.get("arguments", "{}"))
         except Exception as e:
             error_msg = f"Error parsing tool call arguments: {e}. "
-        if tool_call.get("name") != "bash":
-            error_msg += f"Unknown tool '{tool_call.get('name')}'."
-        if "command" not in args:
-            error_msg += "Missing 'command' argument in bash tool call."
+        tool_name = tool_call.get("name")
+        if tool_name == "bash":
+            if "command" not in args:
+                error_msg += "Missing 'command' argument in bash tool call."
+        elif tool_name == "tasks":
+            if "op" not in args:
+                error_msg += "Missing 'op' argument in tasks tool call."
+        else:
+            error_msg += f"Unknown tool '{tool_name}'."
         if error_msg:
             error_text = Template(format_error_template, undefined=StrictUndefined).render(error=error_msg.strip())
             raise FormatError(_format_error_message(error_text))
-        actions.append({"command": args["command"], "tool_call_id": tool_call.get("call_id") or tool_call.get("id")})
+        if tool_name == "bash":
+            actions.append({"command": args["command"], "tool_call_id": tool_call.get("call_id") or tool_call.get("id")})
+        else:
+            actions.append({"tasks_args": args, "tool_call_id": tool_call.get("call_id") or tool_call.get("id")})
     return actions
 
 

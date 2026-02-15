@@ -6,6 +6,7 @@ import pytest
 from minisweagent.models import GLOBAL_MODEL_STATS
 from minisweagent.models.portkey_response_model import PortkeyResponseAPIModel
 from minisweagent.models.utils.actions_toolcall_response import BASH_TOOL_RESPONSE_API
+from minisweagent.tools import get_tasks_tool_definition
 
 
 def test_response_api_model_basic_query():
@@ -37,6 +38,40 @@ def test_response_api_model_basic_query():
         assert result["extra"]["actions"] == [{"command": "echo test", "tool_call_id": "call_abc"}]
         mock_client.responses.create.assert_called_once_with(
             model="gpt-5-mini", input=messages, tools=[BASH_TOOL_RESPONSE_API]
+        )
+
+
+def test_response_api_model_includes_extra_tools():
+    mock_portkey_class = MagicMock()
+    mock_client = MagicMock()
+    mock_portkey_class.return_value = mock_client
+
+    with (
+        patch("minisweagent.models.portkey_response_model.Portkey", mock_portkey_class),
+        patch.dict(os.environ, {"PORTKEY_API_KEY": "test-key"}),
+        patch("minisweagent.models.portkey_response_model.litellm.cost_calculator.completion_cost", return_value=0.01),
+    ):
+        mock_response = Mock()
+        mock_response.id = "resp_123"
+        mock_response.output = [
+            {"type": "function_call", "call_id": "call_abc", "name": "bash", "arguments": '{"command": "echo test"}'}
+        ]
+        mock_response.model_dump.return_value = {
+            "id": "resp_123",
+            "output": mock_response.output,
+        }
+        mock_client.responses.create.return_value = mock_response
+
+        tasks_tool = get_tasks_tool_definition()["function"]
+        tasks_tool_response = {"type": "function", **tasks_tool}
+        model = PortkeyResponseAPIModel(model_name="gpt-5-mini", extra_tools=[tasks_tool_response])
+        messages = [{"role": "user", "content": "test"}]
+        model.query(messages)
+
+        mock_client.responses.create.assert_called_once_with(
+            model="gpt-5-mini",
+            input=messages,
+            tools=[BASH_TOOL_RESPONSE_API, tasks_tool_response],
         )
 
 

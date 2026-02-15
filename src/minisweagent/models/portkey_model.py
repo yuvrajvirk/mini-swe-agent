@@ -32,6 +32,8 @@ except ImportError:
 class PortkeyModelConfig(BaseModel):
     model_name: str
     model_kwargs: dict[str, Any] = {}
+    extra_tools: list[dict[str, Any]] = []
+    """Additional tools appended to the default bash tool."""
     provider: str = ""
     """The LLM provider to use (e.g., 'openai', 'anthropic', 'google').
     If not specified, will be auto-detected from model_name.
@@ -91,7 +93,7 @@ class PortkeyModel:
         return self.client.chat.completions.create(
             model=self.config.model_name,
             messages=messages,
-            tools=[BASH_TOOL],
+            tools=[BASH_TOOL, *self.config.extra_tools],
             **(self.config.model_kwargs | kwargs),
         )
 

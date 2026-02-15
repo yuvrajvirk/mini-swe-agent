@@ -26,6 +26,37 @@ BASH_TOOL = {
     },
 }
 
+TASKS_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "tasks",
+        "description": "Manage a lightweight task graph without shell commands.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "op": {
+                    "type": "string",
+                    "enum": ["create", "get", "list", "note_append", "dep_add", "close", "delete"],
+                },
+                "id": {"type": "string"},
+                "title": {"type": "string"},
+                "description": {"type": "string"},
+                "client_id": {"type": "string"},
+                "view": {"type": "string", "enum": ["open", "ready", "closed", "all"]},
+                "include_full": {"type": "boolean"},
+                "limit": {"type": "integer"},
+                "offset": {"type": "integer"},
+                "note": {"type": "string"},
+                "blocker_id": {"type": "string"},
+                "blocked_id": {"type": "string"},
+                "reason": {"type": "string"},
+                "hard": {"type": "boolean"},
+            },
+            "required": ["op"],
+        },
+    },
+}
+
 
 def parse_toolcall_actions(tool_calls: list, *, format_error_template: str) -> list[dict]:
     """Parse tool calls from the response. Raises FormatError if unknown tool or invalid args."""
@@ -47,10 +78,14 @@ def parse_toolcall_actions(tool_calls: list, *, format_error_template: str) -> l
             args = json.loads(tool_call.function.arguments)
         except Exception as e:
             error_msg = f"Error parsing tool call arguments: {e}. "
-        if tool_call.function.name != "bash":
+        if tool_call.function.name == "bash":
+            if "command" not in args:
+                error_msg += "Missing 'command' argument in bash tool call."
+        elif tool_call.function.name == "tasks":
+            if "op" not in args:
+                error_msg += "Missing 'op' argument in tasks tool call."
+        else:
             error_msg += f"Unknown tool '{tool_call.function.name}'."
-        if "command" not in args:
-            error_msg += "Missing 'command' argument in bash tool call."
         if error_msg:
             raise FormatError(
                 {
@@ -61,7 +96,10 @@ def parse_toolcall_actions(tool_calls: list, *, format_error_template: str) -> l
                     "extra": {"interrupt_type": "FormatError"},
                 }
             )
-        actions.append({"command": args["command"], "tool_call_id": tool_call.id})
+        if tool_call.function.name == "bash":
+            actions.append({"command": args["command"], "tool_call_id": tool_call.id})
+        else:
+            actions.append({"tasks_args": args, "tool_call_id": tool_call.id})
     return actions
 
 

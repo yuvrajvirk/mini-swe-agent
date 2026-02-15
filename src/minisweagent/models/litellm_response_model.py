@@ -40,7 +40,7 @@ class LitellmResponseModel(LitellmModel):
             return litellm.responses(
                 model=self.config.model_name,
                 input=messages,
-                tools=[BASH_TOOL_RESPONSE_API],
+                tools=[BASH_TOOL_RESPONSE_API, *self.config.extra_tools],
                 **(self.config.model_kwargs | kwargs),
             )
         except litellm.exceptions.AuthenticationError as e:

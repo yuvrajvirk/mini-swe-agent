@@ -5,6 +5,7 @@ import pytest
 from minisweagent.exceptions import FormatError
 from minisweagent.models.utils.actions_toolcall import (
     BASH_TOOL,
+    TASKS_TOOL,
     format_toolcall_observation_messages,
     parse_toolcall_actions,
 )
@@ -42,6 +43,24 @@ class TestParseToolcallActions:
         assert len(result) == 3
         assert result[0] == {"command": "cmd0", "tool_call_id": "call_0"}
         assert result[2] == {"command": "cmd2", "tool_call_id": "call_2"}
+
+    def test_valid_tasks_tool_call(self):
+        tool_call = MagicMock()
+        tool_call.function.name = "tasks"
+        tool_call.function.arguments = '{"op": "list", "view": "all"}'
+        tool_call.id = "call_tasks"
+        assert parse_toolcall_actions([tool_call], format_error_template="{{ error }}") == [
+            {"tasks_args": {"op": "list", "view": "all"}, "tool_call_id": "call_tasks"}
+        ]
+
+    def test_tasks_missing_op_raises_format_error(self):
+        tool_call = MagicMock()
+        tool_call.function.name = "tasks"
+        tool_call.function.arguments = '{"view": "all"}'
+        tool_call.id = "call_tasks"
+        with pytest.raises(FormatError) as exc_info:
+            parse_toolcall_actions([tool_call], format_error_template="{{ error }}")
+        assert "Missing 'op' argument" in exc_info.value.messages[0]["content"]
 
     def test_unknown_tool_raises_format_error(self):
         tool_call = MagicMock()
@@ -126,3 +145,9 @@ class TestBashTool:
         assert BASH_TOOL["function"]["name"] == "bash"
         assert "command" in BASH_TOOL["function"]["parameters"]["properties"]
         assert "command" in BASH_TOOL["function"]["parameters"]["required"]
+
+    def test_tasks_tool_structure(self):
+        assert TASKS_TOOL["type"] == "function"
+        assert TASKS_TOOL["function"]["name"] == "tasks"
+        assert "op" in TASKS_TOOL["function"]["parameters"]["properties"]
+        assert "op" in TASKS_TOOL["function"]["parameters"]["required"]
