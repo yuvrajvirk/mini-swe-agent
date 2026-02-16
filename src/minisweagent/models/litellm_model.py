@@ -18,7 +18,7 @@ from minisweagent.models.utils.actions_toolcall import (
 from minisweagent.models.utils.anthropic_utils import _reorder_anthropic_thinking_blocks
 from minisweagent.models.utils.cache_control import set_cache_control
 from minisweagent.models.utils.openai_multimodal import expand_multimodal_content
-from minisweagent.models.utils.retry import retry
+from minisweagent.models.utils.retry import RetryStats, retry
 
 logger = logging.getLogger("litellm_model")
 
@@ -80,9 +80,20 @@ class LitellmModel:
         return set_cache_control(prepared, mode=self.config.set_cache_control)
 
     def query(self, messages: list[dict[str, str]], **kwargs) -> dict:
-        for attempt in retry(logger=logger, abort_exceptions=self.abort_exceptions):
+        retry_stats = RetryStats()
+        api_start = time.perf_counter()
+        final_attempt_time = 0.0
+        for attempt in retry(
+            logger=logger,
+            abort_exceptions=self.abort_exceptions,
+            stats=retry_stats,
+        ):
             with attempt:
+                call_start = time.perf_counter()
                 response = self._query(self._prepare_messages_for_api(messages), **kwargs)
+                final_attempt_time = time.perf_counter() - call_start
+        api_total_time = time.perf_counter() - api_start
+        retry_time = max(0.0, api_total_time - final_attempt_time)
         cost_output = self._calculate_cost(response)
         GLOBAL_MODEL_STATS.add(cost_output["cost"])
         message = response.choices[0].message.model_dump()
@@ -90,6 +101,13 @@ class LitellmModel:
             "actions": self._parse_actions(response),
             "response": response.model_dump(),
             **cost_output,
+            "timing": {
+                "api_total_time": api_total_time,
+                "api_response_time": final_attempt_time,
+                "retry_time": retry_time,
+                "retry_count": retry_stats.retry_count,
+                "retry_sleep_time": retry_stats.sleep_time,
+            },
             "timestamp": time.time(),
         }
         return message
