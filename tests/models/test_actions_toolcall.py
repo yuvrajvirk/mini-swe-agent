@@ -151,3 +151,6 @@ class TestBashTool:
         assert TASKS_TOOL["function"]["name"] == "tasks"
         assert "op" in TASKS_TOOL["function"]["parameters"]["properties"]
         assert "op" in TASKS_TOOL["function"]["parameters"]["required"]
+        assert "update" in TASKS_TOOL["function"]["parameters"]["properties"]["op"]["enum"]
+        assert "include_findings" in TASKS_TOOL["function"]["parameters"]["properties"]
+        assert "include_findings" in TASKS_TOOL["function"]["parameters"]["properties"]["view"]["enum"]

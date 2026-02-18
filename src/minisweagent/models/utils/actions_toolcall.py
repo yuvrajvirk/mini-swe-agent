@@ -36,14 +36,15 @@ TASKS_TOOL = {
             "properties": {
                 "op": {
                     "type": "string",
-                    "enum": ["create", "get", "list", "note_append", "dep_add", "close", "delete"],
+                    "enum": ["create", "get", "update", "list", "note_append", "dep_add", "close", "delete"],
                 },
                 "id": {"type": "string"},
                 "title": {"type": "string"},
                 "description": {"type": "string"},
                 "client_id": {"type": "string"},
-                "view": {"type": "string", "enum": ["open", "ready", "closed", "all"]},
+                "view": {"type": "string", "enum": ["open", "ready", "closed", "all", "include_findings"]},
                 "include_full": {"type": "boolean"},
+                "include_findings": {"type": "boolean"},
                 "limit": {"type": "integer"},
                 "offset": {"type": "integer"},
                 "note": {"type": "string"},

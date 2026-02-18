@@ -16,12 +16,12 @@ def get_tasks_tool_definition() -> dict:
                 "properties": {
                     "op": {
                         "type": "string",
-                        "enum": ["create", "get", "list", "note_append", "dep_add", "close", "delete"],
+                        "enum": ["create", "get", "update", "list", "note_append", "dep_add", "close", "delete"],
                         "description": "Operation to execute on the task graph.",
                     },
-                    "id": {"type": "string", "description": "Task ID for get/note_append/close/delete."},
-                    "title": {"type": "string", "description": "Title for create."},
-                    "description": {"type": "string", "description": "Description for create."},
+                    "id": {"type": "string", "description": "Task ID for get/update/note_append/close/delete."},
+                    "title": {"type": "string", "description": "Title for create/update."},
+                    "description": {"type": "string", "description": "Description for create/update."},
                     "client_id": {
                         "type": "string",
                         "description": (
@@ -31,12 +31,19 @@ def get_tasks_tool_definition() -> dict:
                     },
                     "view": {
                         "type": "string",
-                        "enum": ["open", "ready", "closed", "all"],
+                        "enum": ["open", "ready", "closed", "all", "include_findings"],
                         "description": "List filter for list operation. Defaults to open.",
                     },
                     "include_full": {
                         "type": "boolean",
                         "description": "For list: include full notes/deps instead of compact rows.",
+                    },
+                    "include_findings": {
+                        "type": "boolean",
+                        "description": (
+                            "For list: return raw task history rows including full notes/findings. "
+                            "Omit for lightweight snapshots."
+                        ),
                     },
                     "limit": {"type": "integer", "description": "Optional list page size."},
                     "offset": {"type": "integer", "description": "Optional list offset."},
@@ -50,4 +57,3 @@ def get_tasks_tool_definition() -> dict:
             },
         },
     }
-

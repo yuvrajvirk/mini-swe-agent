@@ -39,4 +39,6 @@ def test_tasks_tool_response_schema():
     assert TASKS_TOOL_RESPONSE_API["type"] == "function"
     assert TASKS_TOOL_RESPONSE_API["name"] == "tasks"
     assert "op" in TASKS_TOOL_RESPONSE_API["parameters"]["properties"]
-
+    assert "update" in TASKS_TOOL_RESPONSE_API["parameters"]["properties"]["op"]["enum"]
+    assert "include_findings" in TASKS_TOOL_RESPONSE_API["parameters"]["properties"]
+    assert "include_findings" in TASKS_TOOL_RESPONSE_API["parameters"]["properties"]["view"]["enum"]
